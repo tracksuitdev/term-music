@@ -1,4 +1,7 @@
+import time
+
 from blessed import Terminal
+from pygame import mixer
 
 from ui import UserInterface
 import numpy as np
@@ -17,4 +20,13 @@ def which_key_is_it():
         print(key.name)
         print(key.code)
 
-which_key_is_it()
+
+def mixing():
+    mixer.init()
+    mixer.music.load("/home/ivan/music-lib/Nuclear.mp3")
+    mixer.music.play()
+    while mixer.music.get_busy():
+        print(mixer.music.get_pos())
+        time.sleep(10)
+
+mixing()

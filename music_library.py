@@ -1,18 +1,14 @@
+import difflib
 import os
-import time
-import traceback
-from multiprocessing import Process
-from queue import Queue, PriorityQueue
+from queue import Queue, PriorityQueue, Empty
 from threading import Thread
 from typing import Optional
 
-import youtube_dl
-import difflib
-
 import numpy as np
+import youtube_dl
 from blessed import Terminal
-
-from pydub import AudioSegment, playback
+from pydub import AudioSegment
+from pygame import mixer
 
 from ui import UserInterface
 
@@ -76,71 +72,133 @@ def remove_extension(filenames):
     return [f[:-4] for f in filenames]
 
 
-class MusicPlayer:
+class Song:
+
+    def __init__(self, path, audio=None):
+        self.path = path
+        self.title = os.path.basename(path)
+        self._audio = audio
+
+    def __getitem__(self, item):
+        return Song(self.title, self.audio().__getitem__(item))
+
+    def audio(self):
+        if not self._audio:
+            self._audio = AudioSegment.from_mp3(self.path)
+        return self._audio
+
+
+class Player:
+
+    STOP = 'STOP'
+    PAUSE = 'PAUSE'
+    UNPAUSE = 'UNPAUSE'
+
+    def __init__(self):
+        mixer.init()
+        self.play_queue = Queue()
+        self.paused = False
+
+    def put(self, command):
+        self.play_queue.put(command)
+
+    def stop(self):
+        self.play_queue.put(self.STOP)
+
+    def pause(self):
+        self.play_queue.put(self.PAUSE)
+
+    def unpause(self):
+        self.play_queue.put(self.UNPAUSE)
+
+    def is_paused(self):
+        return self.paused
+
+    def play(self, path):
+        mixer.music.load(path)
+        mixer.music.play()
+        self.paused = False
+        while True:
+            try:
+                command = self.play_queue.get_nowait()
+                if command == self.STOP:
+                    mixer.music.stop()
+                    mixer.music.unload()
+                    return
+                elif command == self.PAUSE:
+                    mixer.music.pause()
+                    self.paused = True
+                elif command == self.UNPAUSE:
+                    mixer.music.unpause()
+                    self.paused = False
+            except Empty:
+                if not mixer.music.get_busy() and not self.paused:
+                    mixer.music.stop()
+                    mixer.music.unload()
+                    return
+
+
+class App:
 
     def __init__(self):
         self.current = -1
         self.started_at = None
         self.paused = None
+        self.player = Player()
         self.queue = PriorityQueue()
+        self.play_queue = Queue()
         self.song_history = []
         self.terminal = Terminal()
         self.ui = UserInterface(self.terminal)
         self.ui_thread: Optional[Thread] = None
-        self.play_process: Optional[Process] = None
+        self.play_thread: Optional[Thread] = None
         self.thread = Thread(target=self.consumer, daemon=True, name="CONSUMER")
         self.thread.start()
-        self.keyboard_thread = Thread(target=self.keyboard)
+        self.keyboard_thread = Thread(target=self.keyboard, daemon=True)
         self.keyboard_thread.start()
 
-    def play(self, song):
-        self.queue.put((len(self.song_history), song))
-        self.song_history.append(song)
+    def play(self, path):
+        self.queue.put((len(self.song_history), Song(path)))
+        self.song_history.append(path)
 
     def join(self):
         self.queue.join()
 
-    def play_audio(self, audio: AudioSegment, title):
+    def play_audio(self, song: Song):
+        self.start_ui(song)
+        self.play_thread = Thread(target=self.player.play, args=[song.path])
+        self.play_thread.start()
+        self.play_thread.join()
+        self.ui_thread.join()
+
+    def start_ui(self, song: Song):
+        audio = song.audio()
+        title = song.title
         data = np.array(audio.get_array_of_samples()[0::2])
         self.ui_thread = Thread(target=self.ui.render, args=[data, audio.max_possible_amplitude, audio.frame_rate,
                                                              title, audio.duration_seconds])
-        self.play_process = Process(target=playback.play, args=(audio,))
         self.ui_thread.start()
-        self.play_process.start()
-        self.started_at = time.time()
-        self.play_process.join()
-        self.ui_thread.join()
 
-    @staticmethod
-    def open_file(song):
-        audio = AudioSegment.from_mp3(song)
-        title = os.path.basename(song)
-        return audio, title
+    def get_song(self, index):
+        return Song(self.song_history[index])
 
-    def play_file(self, song):
-        self.play_audio(*self.open_file(song))
-
-    def is_playing(self):
-        return self.play_process and self.play_process.is_alive() and self.ui_thread and self.ui_thread.is_alive()
+    def get_current(self):
+        return self.get_song(self.current)
 
     def stop(self):
-        if self.is_playing():
-            self.play_process.terminate()
+        if mixer.music.get_busy():
+            self.player.stop()
             self.ui.terminate()
-            self.play_process.join()
-            self.ui_thread.join()
 
     def pause(self):
-        if self.is_playing():
-            self.paused = time.time() - self.started_at
-            self.stop()
+        if mixer.music.get_busy():
+            self.player.pause()
+            self.ui.terminate()
 
     def restart(self):
-        if not self.is_playing() and self.paused:
-            audio, title = self.open_file(self.song_history[self.current])
-            audio = audio[int(self.paused):]
-            self.paused = None
-            self.play_audio(audio, title)
+        song = self.get_current()[mixer.music.get_pos():]
+        self.player.unpause()
+        self.start_ui(song)
 
     def consumer(self):
         while True:
@@ -148,7 +206,7 @@ class MusicPlayer:
                 continue
             index, song = self.queue.get()
             self.current = index
-            self.play_file(song)
+            self.play_audio(song)
             self.queue.task_done()
 
     def keyboard(self):
@@ -161,10 +219,10 @@ class MusicPlayer:
                     elif key.name == 'KEY_LEFT':
                         if len(self.song_history) > 0:
                             self.stop()
-                            self.queue.put((self.current - 1, self.song_history[self.current - 1]))
-                            self.queue.put((self.current, self.song_history[self.current]))
+                            self.queue.put((self.current - 1, self.get_song(self.current - 1)))
+                            self.queue.put((self.current, self.get_current()))
                     elif key == ' ':
-                        if self.paused:
+                        if self.player.is_paused():
                             self.restart()
                         else:
                             self.pause()
@@ -309,4 +367,3 @@ class MusicLibrary:
         print("{:15s}  {:s}".format("----", "--------"))
         for song in self.songs():
             print("{:15s}  {:s}".format(song, ", ".join(song_playlists[song]) if song_playlists.get(song) else ""))
-

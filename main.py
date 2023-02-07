@@ -3,7 +3,7 @@
 import argparse
 
 from config import DOWNLOAD_FOLDER
-from music_library import MusicLibrary, Playlist, MusicPlayer
+from music_library import MusicLibrary, App
 
 
 def play_song(music_lib: MusicLibrary, args):
@@ -74,7 +74,7 @@ def main():
                              help="don't search youtube and download the song if none is found in library")
 
     parser_playall = subparsers.add_parser("playall", help="play all songs or playlists")
-    parser_playall.add_argument("what", nargs="*", default="songs", choices=["songs", "playlists"])
+    parser_playall.add_argument("what", nargs="*", default=["songs"], choices=["songs", "playlists"])
 
     parser_playlist = subparsers.add_parser("playlist", help="play playlist")
     parser_playlist.add_argument("query", help="query used to search the library for a playlist to play")
@@ -92,16 +92,12 @@ def main():
     parser_load.add_argument("-c", "--check", help="if true will check if song already exists and won't download it",
                              action="store_true")
 
-    # Parse the command line arguments
-    args = parser.parse_args()
 
-    # Create a new music library
-    player = MusicPlayer()
+    args = parser.parse_args()
+    player = App()
     library = MusicLibrary(DOWNLOAD_FOLDER, player)
 
-    # Handle the different commands
     if args.command == "play":
-        # Play the given song or playlist
         play_song(library, args)
     elif args.command == "playall":
         play_all(library, args)
