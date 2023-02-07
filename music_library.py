@@ -1,12 +1,20 @@
 import os
-from queue import Queue
+import time
+import traceback
+from multiprocessing import Process
+from queue import Queue, PriorityQueue
 from threading import Thread
+from typing import Optional
 
-import audiovisualizer
 import youtube_dl
 import difflib
 
+import numpy as np
+from blessed import Terminal
+
 from pydub import AudioSegment, playback
+
+from ui import UserInterface
 
 
 class Playlist:
@@ -71,32 +79,101 @@ def remove_extension(filenames):
 class MusicPlayer:
 
     def __init__(self):
-        self.queue = Queue()
-        self.thread = Thread(target=self.consumer, daemon=True)
+        self.current = -1
+        self.started_at = None
+        self.paused = None
+        self.queue = PriorityQueue()
+        self.song_history = []
+        self.terminal = Terminal()
+        self.ui = UserInterface(self.terminal)
+        self.ui_thread: Optional[Thread] = None
+        self.play_process: Optional[Process] = None
+        self.thread = Thread(target=self.consumer, daemon=True, name="CONSUMER")
+        self.thread.start()
+        self.keyboard_thread = Thread(target=self.keyboard)
+        self.keyboard_thread.start()
 
     def play(self, song):
-        self.queue.put(song)
+        self.queue.put((len(self.song_history), song))
+        self.song_history.append(song)
+
+    def join(self):
+        self.queue.join()
+
+    def play_audio(self, audio: AudioSegment, title):
+        data = np.array(audio.get_array_of_samples()[0::2])
+        self.ui_thread = Thread(target=self.ui.render, args=[data, audio.max_possible_amplitude, audio.frame_rate,
+                                                             title, audio.duration_seconds])
+        self.play_process = Process(target=playback.play, args=(audio,))
+        self.ui_thread.start()
+        self.play_process.start()
+        self.started_at = time.time()
+        self.play_process.join()
+        self.ui_thread.join()
 
     @staticmethod
-    def play_file(song):
+    def open_file(song):
         audio = AudioSegment.from_mp3(song)
-        data = audio.get_array_of_samples()[0::2]
-        visualizer_thread = Thread(target=audiovisualizer.visualize, args=[data, audio.frame_rate,
-                                                                           audio.max_possible_amplitude])
-        visualizer_thread.start()
-        playback.play(audio)
-        visualizer_thread.join()
+        title = os.path.basename(song)
+        return audio, title
+
+    def play_file(self, song):
+        self.play_audio(*self.open_file(song))
+
+    def is_playing(self):
+        return self.play_process and self.play_process.is_alive() and self.ui_thread and self.ui_thread.is_alive()
+
+    def stop(self):
+        if self.is_playing():
+            self.play_process.terminate()
+            self.ui.terminate()
+            self.play_process.join()
+            self.ui_thread.join()
+
+    def pause(self):
+        if self.is_playing():
+            self.paused = time.time() - self.started_at
+            self.stop()
+
+    def restart(self):
+        if not self.is_playing() and self.paused:
+            audio, title = self.open_file(self.song_history[self.current])
+            audio = audio[int(self.paused):]
+            self.paused = None
+            self.play_audio(audio, title)
 
     def consumer(self):
         while True:
-            song = self.queue.get()
+            if self.paused:
+                continue
+            index, song = self.queue.get()
+            self.current = index
             self.play_file(song)
+            self.queue.task_done()
+
+    def keyboard(self):
+        while True:
+            with self.terminal.cbreak():
+                key = self.terminal.inkey()
+                if key:
+                    if key.name == 'KEY_RIGHT':
+                        self.stop()
+                    elif key.name == 'KEY_LEFT':
+                        if len(self.song_history) > 0:
+                            self.stop()
+                            self.queue.put((self.current - 1, self.song_history[self.current - 1]))
+                            self.queue.put((self.current, self.song_history[self.current]))
+                    elif key == ' ':
+                        if self.paused:
+                            self.restart()
+                        else:
+                            self.pause()
 
 
 class MusicLibrary:
-    def __init__(self, download_folder):
+    def __init__(self, download_folder, player):
         self.download_folder = download_folder
-        self.player = MusicPlayer()
+        self.player = player
         if not os.path.exists(download_folder):
             os.mkdir(download_folder)
 
@@ -122,7 +199,7 @@ class MusicLibrary:
     def search_and_play_playlist(self, search_query):
         self.play_playlist_filename(self.search_playlists(search_query)[0])
 
-    def search_and_download(self, song_query):
+    def search_and_download(self, song_query, check=False):
         # Song not found in the local library, search YouTube
         ydl_opts = {
             "default_search": "ytsearch",
@@ -133,6 +210,10 @@ class MusicLibrary:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(song_query, download=False)
             song_title = info["entries"][0]["title"]
+            if check and song_title in self.songs():
+                # don't download if we already have one
+                print(f"Skipped download of {song_title}")
+                return song_title
             song_url = info["entries"][0]["webpage_url"]
             # Download the song
             self.download_song(song_url)
@@ -200,11 +281,19 @@ class MusicLibrary:
     def playlist_files(self):
         return filter(is_playlist, os.listdir(self.download_folder))
 
+    def get_or_create_playlist(self, playlist_name):
+        if playlist_name in self.playlists():
+            return Playlist.load(self.download_folder, playlist_name)
+        else:
+            playlist = Playlist(self.download_folder, playlist_name)
+            playlist.save()
+            return playlist
+
     def songs(self):
-        return remove_extension(self.song_files())
+        return set(remove_extension(self.song_files()))
 
     def playlists(self):
-        return remove_extension(self.playlist_files())
+        return set(remove_extension(self.playlist_files()))
 
     def print_songs_and_playlists(self):
         # Create a dictionary to map each song to the playlists it belongs to

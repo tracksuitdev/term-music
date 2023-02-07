@@ -3,7 +3,7 @@
 import argparse
 
 from config import DOWNLOAD_FOLDER
-from music_library import MusicLibrary, Playlist
+from music_library import MusicLibrary, Playlist, MusicPlayer
 
 
 def play_song(music_lib: MusicLibrary, args):
@@ -19,7 +19,7 @@ def play_song(music_lib: MusicLibrary, args):
 
 
 def play_all(music_lib: MusicLibrary, args):
-    if args.what == "songs":
+    if args.what[0] == "songs":
         music_lib.play_all()
     else:
         music_lib.play_all_playlists()
@@ -45,11 +45,16 @@ def ls(music_lib: MusicLibrary, args):
 
 
 def load(music_lib: MusicLibrary, args):
-    new_playlist = Playlist(music_lib.download_folder, args.playlist) if args.playlist else None
-    for s in args.songs:
-        song_title = music_lib.search_and_download(s)
-        if new_playlist:
-            new_playlist.add_song(song_title)
+
+    new_playlist = music_lib.get_or_create_playlist(args.playlist) if args.playlist else None
+    for i, s in enumerate(args.songs):
+        try:
+            song_title = music_lib.search_and_download(s, args.check)
+            if new_playlist:
+                new_playlist.add_song(song_title)
+        except Exception as e:
+            print(str(e))
+        print(f"Processed {i + 1}/{len(args.songs)}")
     if new_playlist:
         new_playlist.save()
 
@@ -83,15 +88,16 @@ def main():
 
     parser_load = subparsers.add_parser("load", help="download a list of songs")
     parser_load.add_argument("songs", nargs="+", help="list of songs to download in music library")
-    parser_load.add_argument("-p", "--playlist", help="name of the playlist that will be made out of downloaded songs",
-                             dest="make")
-
+    parser_load.add_argument("-p", "--playlist", help="name of the playlist that will be made out of downloaded songs")
+    parser_load.add_argument("-c", "--check", help="if true will check if song already exists and won't download it",
+                             action="store_true")
 
     # Parse the command line arguments
     args = parser.parse_args()
 
     # Create a new music library
-    library = MusicLibrary(DOWNLOAD_FOLDER)
+    player = MusicPlayer()
+    library = MusicLibrary(DOWNLOAD_FOLDER, player)
 
     # Handle the different commands
     if args.command == "play":
@@ -105,7 +111,7 @@ def main():
         ls(library, args)
     elif args.command == "load":
         load(library, args)
-
+    player.join()
 
 if __name__ == "__main__":
     main()
