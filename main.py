@@ -99,10 +99,13 @@ def main():
 
     if args.command == "play":
         play_song(library, args)
+        player.start()
     elif args.command == "playall":
         play_all(library, args)
+        player.start()
     elif args.command == "playlist":
         playlist(library, args)
+        player.start()
     elif args.command == "ls":
         ls(library, args)
     elif args.command == "load":

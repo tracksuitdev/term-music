@@ -1,7 +1,7 @@
 import difflib
 import os
 from queue import Queue, PriorityQueue, Empty
-from threading import Thread
+from threading import Thread, Lock
 from typing import Optional
 
 import numpy as np
@@ -89,7 +89,6 @@ class Song:
 
 
 class Player:
-
     STOP = 'STOP'
     PAUSE = 'PAUSE'
     UNPAUSE = 'UNPAUSE'
@@ -138,31 +137,84 @@ class Player:
                     return
 
 
+class Data:
+
+    def __init__(self):
+        self._current = -1
+        self._selected = 0
+        self._song_history = []
+        self.selected_lock = Lock()
+        self.current_lock = Lock()
+
+    def length(self):
+        return len(self._song_history)
+
+    def add_song(self, song):
+        self._song_history.append(song)
+
+    def get_current(self):
+        return self._current
+
+    def end(self):
+        self.set_current(self.length())
+
+    def inc_current(self):
+        self.current_lock.acquire()
+        if self._current >= self.length() - 1:
+            return False
+        self._current += 1
+        self.current_lock.release()
+        return True
+
+    def set_current(self, index):
+        self.current_lock.acquire()
+        self._current = index
+        self.current_lock.release()
+
+    def inc_selected(self, inc=1):
+        self.selected_lock.acquire()
+        new_selected = self._selected + inc
+        if -1 < new_selected < len(self._song_history):
+            self._selected = new_selected
+        self.selected_lock.release()
+
+    def set_selected(self, selected):
+        self.selected_lock.acquire()
+        if -1 < self._selected < len(self._song_history):
+            self._selected = selected
+        self.selected_lock.release()
+
+    def get_selected(self):
+        return self._selected
+
+    def get_song(self, index):
+        return Song(self._song_history[index])
+
+    def previous(self):
+        return self._current - 1, Song(self._song_history[self._current - 1])
+
+    def current(self):
+        return self._current, Song(self._song_history[self._current])
+
+    def path_at(self, index):
+        return self._song_history[index]
+
+
 class App:
 
     def __init__(self):
-        self.current = -1
-        self.started_at = None
-        self.paused = None
+        self.data = Data()
         self.player = Player()
-        self.queue = PriorityQueue()
-        self.play_queue = Queue()
-        self.song_history = []
         self.terminal = Terminal()
-        self.ui = UserInterface(self.terminal)
+        self.ui = UserInterface(self.data, self.terminal)
         self.ui_thread: Optional[Thread] = None
         self.play_thread: Optional[Thread] = None
         self.thread = Thread(target=self.consumer, daemon=True, name="CONSUMER")
-        self.thread.start()
         self.keyboard_thread = Thread(target=self.keyboard, daemon=True)
         self.keyboard_thread.start()
 
     def play(self, path):
-        self.queue.put((len(self.song_history), Song(path)))
-        self.song_history.append(path)
-
-    def join(self):
-        self.queue.join()
+        self.data.add_song(path)
 
     def play_audio(self, song: Song):
         self.start_ui(song)
@@ -173,17 +225,10 @@ class App:
 
     def start_ui(self, song: Song):
         audio = song.audio()
-        title = song.title
         data = np.array(audio.get_array_of_samples()[0::2])
         self.ui_thread = Thread(target=self.ui.render, args=[data, audio.max_possible_amplitude, audio.frame_rate,
-                                                             title, audio.duration_seconds])
+                                                             audio.duration_seconds])
         self.ui_thread.start()
-
-    def get_song(self, index):
-        return Song(self.song_history[index])
-
-    def get_current(self):
-        return self.get_song(self.current)
 
     def stop(self):
         if mixer.music.get_busy():
@@ -196,36 +241,46 @@ class App:
             self.ui.terminate()
 
     def restart(self):
-        song = self.get_current()[mixer.music.get_pos():]
+        song = self.data.current()[1][mixer.music.get_pos():]
         self.player.unpause()
         self.start_ui(song)
 
+    def start(self):
+        self.thread.start()
+
     def consumer(self):
-        while True:
-            if self.paused:
-                continue
-            index, song = self.queue.get()
-            self.current = index
+        while self.data.inc_current():
+            index, song = self.data.current()
+            self.data.set_selected(index)
             self.play_audio(song)
-            self.queue.task_done()
+
+    def join(self):
+        self.thread.join()
+        print(self.terminal.clear)
+        print(self.terminal.home)
+        print(self.terminal.normal_cursor)
 
     def keyboard(self):
         while True:
             with self.terminal.cbreak():
                 key = self.terminal.inkey()
                 if key:
-                    if key.name == 'KEY_RIGHT':
-                        self.stop()
-                    elif key.name == 'KEY_LEFT':
-                        if len(self.song_history) > 0:
-                            self.stop()
-                            self.queue.put((self.current - 1, self.get_song(self.current - 1)))
-                            self.queue.put((self.current, self.get_current()))
+                    if key.name == 'KEY_DOWN':
+                        self.data.inc_selected()
+                    elif key.name == 'KEY_UP':
+                        self.data.inc_selected(-1)
                     elif key == ' ':
                         if self.player.is_paused():
                             self.restart()
                         else:
                             self.pause()
+                    elif key.name == 'KEY_ENTER':
+                        self.stop()
+                        # decreasing by 1 because consumer thread will increase by 1
+                        self.data.set_current(self.data.get_selected() - 1)
+                    elif key.name == 'KEY_ESCAPE':
+                        self.stop()
+                        self.data.end()
 
 
 class MusicLibrary:

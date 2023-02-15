@@ -29,4 +29,5 @@ def mixing():
         print(mixer.music.get_pos())
         time.sleep(10)
 
-mixing()
+# mixing()
+which_key_is_it()
