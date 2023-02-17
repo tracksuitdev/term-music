@@ -3,7 +3,8 @@
 import argparse
 
 from config import DOWNLOAD_FOLDER
-from music_library import MusicLibrary, App
+from app import App
+from domain.music_library import MusicLibrary
 
 
 def play_song(music_lib: MusicLibrary, args):

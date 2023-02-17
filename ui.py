@@ -47,11 +47,12 @@ class UserInterface:
             title = os.path.basename(song)
             with self.t.location(self.width, i - start):
                 if self.data.get_current() == i:
-                    print(self.t.green(f"{title} {elapsed}/{duration}"[:max_width]))
+                    clock_str = f" {elapsed}/{duration}"
+                    print(self.t.green(title[:max_width - len(clock_str)] + clock_str))
                 elif self.data.get_selected() == i:
-                    print(self.t.blue(title)[:max_width])
+                    print(self.t.blue(title[:max_width]))
                 else:
-                    print(self.t.snow4(title)[:max_width])
+                    print(self.t.snow4(title[:max_width]))
 
     def render(self, data: ndarray, max_amp: int, frame_rate: int, duration: float):
         with self.t.hidden_cursor():
@@ -64,7 +65,7 @@ class UserInterface:
                 if self.stop:
                     self.stop = False
                     break
-                elapsed_str = self.format_time(mixer.music.get_pos() / 1000)
+                elapsed_str = self.format_time(min(mixer.music.get_pos() / 1000, duration))
                 self.clear()
                 self.draw_frame(f)
                 self.draw_song_list(duration_str, elapsed_str)
