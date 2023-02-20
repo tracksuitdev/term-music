@@ -93,10 +93,9 @@ def main():
     parser_load.add_argument("-c", "--check", help="if true will check if song already exists and won't download it",
                              action="store_true")
 
-
     args = parser.parse_args()
-    player = App()
-    library = MusicLibrary(DOWNLOAD_FOLDER, player)
+    library = MusicLibrary(DOWNLOAD_FOLDER)
+    player = App(library)
 
     if args.command == "play":
         play_song(library, args)
@@ -112,6 +111,7 @@ def main():
     elif args.command == "load":
         load(library, args)
     player.join()
+
 
 if __name__ == "__main__":
     main()

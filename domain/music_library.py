@@ -3,6 +3,7 @@ import os
 
 import youtube_dl
 
+from app_data import APP_DATA
 from domain.playlist import Playlist
 
 
@@ -19,9 +20,9 @@ def remove_extension(filenames):
 
 
 class MusicLibrary:
-    def __init__(self, download_folder, player):
+    def __init__(self, download_folder):
         self.download_folder = download_folder
-        self.player = player
+        self.data = APP_DATA
         if not os.path.exists(download_folder):
             os.mkdir(download_folder)
 
@@ -39,16 +40,15 @@ class MusicLibrary:
             ydl.download([song_url])
 
     def search_song(self, search_query):
-        return difflib.get_close_matches(search_query, self.songs(), n=1, cutoff=0.0)
+        return difflib.get_close_matches(search_query, self.songs(), n=1)
 
     def search_playlists(self, search_query):
-        return difflib.get_close_matches(search_query, self.playlists(), n=1, cutoff=0.0)
+        return difflib.get_close_matches(search_query, self.playlists(), n=1)
 
     def search_and_play_playlist(self, search_query):
         self.play_playlist_filename(self.search_playlists(search_query)[0])
 
-    def search_and_download(self, song_query, check=False):
-        # Song not found in the local library, search YouTube
+    def search_and_download(self, song_query, check=False, ask=False):
         ydl_opts = {
             "default_search": "ytsearch",
             "max_downloads": 1,
@@ -58,6 +58,10 @@ class MusicLibrary:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(song_query, download=False)
             song_title = info["entries"][0]["title"]
+            if ask:
+                ans = input(f"Do you want to download {song_title} Y/N")
+                if ans == "N":
+                    return None
             if check and song_title in self.songs():
                 # don't download if we already have one
                 print(f"Skipped download of {song_title}")
@@ -67,7 +71,7 @@ class MusicLibrary:
             self.download_song(song_url)
             return song_title
 
-    def download_and_play_song(self, song_query):
+    def download_and_play_song(self, song_query, now=False, ask=False):
         # Search the local music library for the song
         search_result = self.search_song(song_query)
         if search_result:
@@ -75,16 +79,26 @@ class MusicLibrary:
             print(search_result)
             song_title = search_result[0]
         else:
-            song_title = self.search_and_download(song_query)
+            song_title = self.search_and_download(song_query, ask=ask)
+            if not song_title:
+                return False
 
         # Play the song
-        self.play_song(song_title)
+        self.play_song(song_title, now)
+        return True
 
-    def play_filename(self, filename):
-        self.player.play(os.path.join(self.download_folder, filename))
+    def play_filename(self, filename, now=False):
+        """
+        Adds filename to player queue, if now is True the song is added after the current one
+        """
+        full_path = os.path.join(self.download_folder, filename)
+        if now:
+            self.data.insert_song_after_current(full_path)
+        else:
+            self.data.add_song(full_path)
 
-    def play_song(self, song):
-        self.play_filename(song + ".mp3")
+    def play_song(self, song, now=False):
+        self.play_filename(song + ".mp3", now)
 
     def play_playlist(self, playlist):
         self.play_playlist_filename(playlist + ".txt")

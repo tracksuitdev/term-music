@@ -1,30 +1,15 @@
-import os
 from queue import Queue, Empty
-from threading import Thread, Lock
+from threading import Thread
 from typing import Optional
 
 import numpy as np
 from blessed import Terminal
-from pydub import AudioSegment
 from pygame import mixer
 
+from app_data import APP_DATA
+from domain.music_library import MusicLibrary
+from domain.song import Song
 from ui import UserInterface
-
-
-class Song:
-
-    def __init__(self, path, audio=None):
-        self.path = path
-        self.title = os.path.basename(path)
-        self._audio = audio
-
-    def __getitem__(self, item):
-        return Song(self.title, self.audio().__getitem__(item))
-
-    def audio(self):
-        if not self._audio:
-            self._audio = AudioSegment.from_mp3(self.path)
-        return self._audio
 
 
 class Player:
@@ -76,73 +61,11 @@ class Player:
                     return
 
 
-class Data:
-
-    def __init__(self):
-        self._current = -1
-        self._selected = 0
-        self._song_history = []
-        self.selected_lock = Lock()
-        self.current_lock = Lock()
-
-    def length(self):
-        return len(self._song_history)
-
-    def add_song(self, song):
-        self._song_history.append(song)
-
-    def get_current(self):
-        return self._current
-
-    def end(self):
-        self.set_current(self.length())
-
-    def inc_current(self):
-        self.current_lock.acquire()
-        if self._current >= self.length() - 1:
-            return False
-        self._current += 1
-        self.current_lock.release()
-        return True
-
-    def set_current(self, index):
-        self.current_lock.acquire()
-        self._current = index
-        self.current_lock.release()
-
-    def inc_selected(self, inc=1):
-        self.selected_lock.acquire()
-        new_selected = self._selected + inc
-        if -1 < new_selected < len(self._song_history):
-            self._selected = new_selected
-        self.selected_lock.release()
-
-    def set_selected(self, selected):
-        self.selected_lock.acquire()
-        if -1 < self._selected < len(self._song_history):
-            self._selected = selected
-        self.selected_lock.release()
-
-    def get_selected(self):
-        return self._selected
-
-    def get_song(self, index):
-        return Song(self._song_history[index])
-
-    def previous(self):
-        return self._current - 1, Song(self._song_history[self._current - 1])
-
-    def current(self):
-        return self._current, Song(self._song_history[self._current])
-
-    def path_at(self, index):
-        return self._song_history[index]
-
-
 class App:
 
-    def __init__(self):
-        self.data = Data()
+    def __init__(self, music_lib: MusicLibrary):
+        self.music_lib = music_lib
+        self.data = APP_DATA
         self.player = Player()
         self.terminal = Terminal()
         self.ui = UserInterface(self.data, self.terminal)
@@ -156,18 +79,26 @@ class App:
         self.data.add_song(path)
 
     def play_audio(self, song: Song):
-        self.start_ui(song)
+        self.load_ui(song)
         self.play_thread = Thread(target=self.player.play, args=[song.path])
+        self.ui_thread.start()
         self.play_thread.start()
         self.play_thread.join()
         self.ui_thread.join()
 
-    def start_ui(self, song: Song):
+    def load_ui(self, song: Song):
         audio = song.audio()
         data = np.array(audio.get_array_of_samples()[0::2])
         self.ui_thread = Thread(target=self.ui.render, args=[data, audio.max_possible_amplitude, audio.frame_rate,
                                                              audio.duration_seconds])
+
+    def start_ui(self, song: Song):
+        self.load_ui(song)
         self.ui_thread.start()
+
+    def restart_ui(self):
+        song = self.data.current()[1][mixer.music.get_pos():]
+        self.start_ui(song)
 
     def stop(self):
         if mixer.music.get_busy():
@@ -180,9 +111,8 @@ class App:
             self.ui.terminate()
 
     def restart(self):
-        song = self.data.current()[1][mixer.music.get_pos():]
+        self.restart_ui()
         self.player.unpause()
-        self.start_ui(song)
 
     def start(self):
         self.thread.start()
@@ -223,9 +153,27 @@ class App:
                         self.stop()
                         # decreasing by 1 because consumer thread will increase by 1
                         self.data.set_current(self.data.get_selected() - 1)
+                    elif key == 'q':
+                        self.ui.terminate()
+                        self.ui_thread.join()
+                        self.ui.clear()
+                        self.data.set_query_mode(True)
                     elif key.name == 'KEY_ESCAPE':
                         self.stop()
                         self.data.end()
                         return
+            if self.data.get_query_mode():
+                query = input()
+                success = self.music_lib.download_and_play_song(query, True, True)
+                if success:
+                    self.data.set_query_mode(False)
+                    self.stop()
+                else:
+                    ret = input("No song found, return to player Y/N")
+                    if ret == "Y":
+                        self.data.set_query_mode(False)
+                        self.restart_ui()
+
+
 
 
