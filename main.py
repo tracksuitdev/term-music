@@ -20,7 +20,7 @@ def play_song(music_lib: MusicLibrary, args):
 
 
 def play_all(music_lib: MusicLibrary, args):
-    if args.what[0] == "songs":
+    if args.what == "songs":
         music_lib.play_all()
     else:
         music_lib.play_all_playlists()
@@ -75,7 +75,7 @@ def main():
                              help="don't search youtube and download the song if none is found in library")
 
     parser_playall = subparsers.add_parser("playall", help="play all songs or playlists")
-    parser_playall.add_argument("what", nargs="*", default=["songs"], choices=["songs", "playlists"])
+    parser_playall.add_argument("what", nargs="?", default=["songs"], choices=["songs", "playlists"])
 
     parser_playlist = subparsers.add_parser("playlist", help="play playlist")
     parser_playlist.add_argument("query", help="query used to search the library for a playlist to play")

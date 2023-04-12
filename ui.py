@@ -70,12 +70,10 @@ class UserInterface:
             frame_gen = graph_frames_from_audio(data, point_interval, self.width, divisor)
             current_frame = 0
             duration_str = self.format_time(duration)
-            print(self.stop)
             while not self.stop:
                 frame_start = time.time()
                 elapsed_str = self.format_time(min(mixer.music.get_pos() / 1000, duration))
                 self.clear()
-                print("running")
                 if not self.paused:
                     try:
                         f = frame_gen.__next__()
@@ -83,7 +81,6 @@ class UserInterface:
                         self.stop = False
                         self.paused = False
                         return
-                    print("Drawing frame")
                     self.draw_frame(f)
                     current_frame += 1
                 self.draw_song_list(duration_str, elapsed_str)

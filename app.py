@@ -122,7 +122,6 @@ class App:
     def consumer(self):
         while self.data.inc_current():
             index, song = self.data.current()
-            print(index, song, self.ui_thread)
             self.data.set_selected(index)
             self.play_audio(song)
 
