@@ -1,5 +1,5 @@
-import difflib
 import os
+from typing import Iterable
 
 import youtube_dl
 
@@ -17,6 +17,15 @@ def is_playlist(filename):
 
 def remove_extension(filenames):
     return [f[:-4] for f in filenames]
+
+
+def search(query: str, data: Iterable[str]):
+    lower_query = query.lower()
+    results = []
+    for item in data:
+        if lower_query in item.lower():
+            results.append(item)
+    return results
 
 
 class MusicLibrary:
@@ -40,10 +49,10 @@ class MusicLibrary:
             ydl.download([song_url])
 
     def search_song(self, search_query):
-        return difflib.get_close_matches(search_query, self.songs(), n=1)
+        return search(search_query, self.songs())
 
     def search_playlists(self, search_query):
-        return difflib.get_close_matches(search_query, self.playlists(), n=1)
+        return search(search_query, self.playlists())
 
     def search_and_play_playlist(self, search_query):
         self.play_playlist_filename(self.search_playlists(search_query)[0])
@@ -59,7 +68,7 @@ class MusicLibrary:
             info = ydl.extract_info(song_query, download=False)
             song_title = info["entries"][0]["title"]
             if ask:
-                ans = input(f"Do you want to download {song_title} Y/N")
+                ans = input(f"Do you want to download {song_title} Y/N: ")
                 if ans == "N":
                     return None
             if check and song_title in self.songs():
@@ -76,12 +85,12 @@ class MusicLibrary:
         search_result = self.search_song(song_query)
         if search_result:
             # Found the song in the local library
-            print(search_result)
             song_title = search_result[0]
         else:
             song_title = self.search_and_download(song_query, ask=ask)
-            if not song_title:
-                return False
+
+        if not song_title:
+            return False
 
         # Play the song
         self.play_song(song_title, now)
@@ -97,7 +106,7 @@ class MusicLibrary:
         else:
             self.data.add_song(full_path)
 
-    def play_song(self, song, now=False):
+    def play_song(self, song: str, now=False):
         self.play_filename(song + ".mp3", now)
 
     def play_playlist(self, playlist):

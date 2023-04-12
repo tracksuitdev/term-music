@@ -17,6 +17,7 @@ class UserInterface:
         self.print_char = print_char
         self.t = terminal
         self.stop = False
+        self.paused = False
 
     @staticmethod
     def format_time(seconds):
@@ -28,6 +29,13 @@ class UserInterface:
 
     def terminate(self):
         self.stop = True
+
+    def pause(self):
+        self.paused = True
+
+    def unpause(self):
+        self.stop = False
+        self.paused = False
 
     def clear(self):
         print(self.t.home + self.t.clear)
@@ -59,19 +67,28 @@ class UserInterface:
             print(self.t.clear)
             length, point_interval, last_frame_length, interval, divisor = \
                 calc_data_for_visualization(data, frame_rate, max_amp, self.width, self.fps, self.height)
-            start = time.time()
+            frame_gen = graph_frames_from_audio(data, point_interval, self.width, divisor)
+            current_frame = 0
             duration_str = self.format_time(duration)
-            for i, f in enumerate(graph_frames_from_audio(data, point_interval, self.width, divisor)):
-                if self.stop:
-                    self.stop = False
-                    break
+            print(self.stop)
+            while not self.stop:
+                frame_start = time.time()
                 elapsed_str = self.format_time(min(mixer.music.get_pos() / 1000, duration))
                 self.clear()
-                self.draw_frame(f)
+                print("running")
+                if not self.paused:
+                    try:
+                        f = frame_gen.__next__()
+                    except StopIteration:
+                        self.stop = False
+                        self.paused = False
+                        return
+                    print("Drawing frame")
+                    self.draw_frame(f)
+                    current_frame += 1
                 self.draw_song_list(duration_str, elapsed_str)
-                frame_length = last_frame_length if i == length - 1 else 1  # 1 denotes full frame
-                elapsed = ((i + 1 * frame_length) * interval)
-                end_time = start + elapsed
-                sleep_for = end_time - time.time()
+                sleep_for = frame_start + interval - time.time()
                 if sleep_for > 0:
                     time.sleep(sleep_for)
+        self.stop = False
+        self.paused = False

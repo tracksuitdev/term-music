@@ -94,25 +94,27 @@ class App:
 
     def start_ui(self, song: Song):
         self.load_ui(song)
+        self.ui.unpause()
         self.ui_thread.start()
 
     def restart_ui(self):
+        self.player.pause()
         song = self.data.current()[1][mixer.music.get_pos():]
         self.start_ui(song)
+        self.player.unpause()
 
     def stop(self):
-        if mixer.music.get_busy():
-            self.player.stop()
-            self.ui.terminate()
+        self.player.stop()
+        self.ui.terminate()
 
     def pause(self):
         if mixer.music.get_busy():
             self.player.pause()
-            self.ui.terminate()
+            self.ui.pause()
 
     def restart(self):
-        self.restart_ui()
         self.player.unpause()
+        self.ui.unpause()
 
     def start(self):
         self.thread.start()
@@ -120,6 +122,7 @@ class App:
     def consumer(self):
         while self.data.inc_current():
             index, song = self.data.current()
+            print(index, song, self.ui_thread)
             self.data.set_selected(index)
             self.play_audio(song)
 
@@ -163,13 +166,13 @@ class App:
                         self.data.end()
                         return
             if self.data.get_query_mode():
-                query = input()
+                query = input("Search: \n")
                 success = self.music_lib.download_and_play_song(query, True, True)
                 if success:
                     self.data.set_query_mode(False)
                     self.stop()
                 else:
-                    ret = input("No song found, return to player Y/N")
+                    ret = input("No song found, return to player Y/N: ")
                     if ret == "Y":
                         self.data.set_query_mode(False)
                         self.restart_ui()
