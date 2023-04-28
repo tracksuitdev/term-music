@@ -1,3 +1,4 @@
+import time
 from queue import Queue, Empty
 from threading import Thread
 from typing import Optional
@@ -71,7 +72,7 @@ class App:
         self.ui = UserInterface(self.data, self.terminal)
         self.ui_thread: Optional[Thread] = None
         self.play_thread: Optional[Thread] = None
-        self.thread = Thread(target=self.consumer, daemon=True, name="CONSUMER")
+        self.thread = Thread(target=self.consumer, daemon=True, name="APP")
         self.keyboard_thread = Thread(target=self.keyboard, daemon=True)
         self.keyboard_thread.start()
 
@@ -79,9 +80,8 @@ class App:
         self.data.add_song(path)
 
     def play_audio(self, song: Song):
-        self.load_ui(song)
         self.play_thread = Thread(target=self.player.play, args=[song.path])
-        self.ui_thread.start()
+        self.start_ui(song)
         self.play_thread.start()
         self.play_thread.join()
         self.ui_thread.join()
@@ -120,10 +120,11 @@ class App:
         self.thread.start()
 
     def consumer(self):
-        while self.data.inc_current():
-            index, song = self.data.current()
-            self.data.set_selected(index)
-            self.play_audio(song)
+        while self.data.running():
+            while self.data.inc_current():
+                index, song = self.data.current()
+                self.data.set_selected(index)
+                self.play_audio(song)
 
     def join(self):
         self.thread.join()
@@ -132,50 +133,67 @@ class App:
         print(self.terminal.home)
         print(self.terminal.normal_cursor)
 
+    def run(self):
+        self.start()
+        self.join()
+
+    def wait_until_playing(self):
+        while not self.data.has_songs():
+            time.sleep(1e-6)
+
     def keyboard(self):
-        while True:
-            with self.terminal.cbreak():
-                key = self.terminal.inkey()
-                if key:
-                    if key.name == 'KEY_DOWN':
-                        self.data.inc_selected()
-                    elif key.name == 'KEY_UP':
-                        self.data.inc_selected(-1)
-                    elif key == ' ':
-                        if self.player.is_paused():
-                            self.restart()
-                        else:
-                            self.pause()
-                    elif key.name == 'KEY_RIGHT':
-                        self.stop()
-                    elif key.name == 'KEY_LEFT':
-                        self.stop()
-                        self.data.set_current(self.data.get_current() - 2)
-                    elif key.name == 'KEY_ENTER':
-                        self.stop()
-                        # decreasing by 1 because consumer thread will increase by 1
-                        self.data.set_current(self.data.get_selected() - 1)
-                    elif key == 'q':
-                        self.ui.terminate()
-                        self.ui_thread.join()
-                        self.ui.clear()
-                        self.data.set_query_mode(True)
-                    elif key.name == 'KEY_ESCAPE':
-                        self.stop()
-                        self.data.end()
-                        return
-            if self.data.get_query_mode():
+        while self.data.running():
+            if self.data.is_query_mode():
                 query = input("Search: \n")
                 success = self.music_lib.download_and_play_song(query, True, True)
                 if success:
-                    self.data.set_query_mode(False)
-                    self.stop()
+                    self.data.normal_mode()
+                    if mixer.music.get_busy():
+                        self.stop()
+                    else:
+                        self.wait_until_playing()
                 else:
                     ret = input("No song found, return to player Y/N: ")
                     if ret == "Y":
-                        self.data.set_query_mode(False)
+                        self.data.normal_mode()
                         self.restart_ui()
-
-
-
-
+            elif not self.data.has_songs():
+                mode = input("No songs to play, p - play all songs in music library, q - enter query mode: ")
+                if mode == "p":
+                    self.music_lib.play_all()
+                    self.wait_until_playing()
+                elif mode == "q":
+                    self.data.query_mode()
+                else:
+                    return
+            else:
+                with self.terminal.cbreak():
+                    key = self.terminal.inkey()
+                    if key:
+                        if key.name == 'KEY_DOWN':
+                            self.data.inc_selected()
+                        elif key.name == 'KEY_UP':
+                            self.data.inc_selected(-1)
+                        elif key == ' ':
+                            if self.player.is_paused():
+                                self.restart()
+                            else:
+                                self.pause()
+                        elif key.name == 'KEY_RIGHT':
+                            self.stop()
+                        elif key.name == 'KEY_LEFT':
+                            self.stop()
+                            self.data.set_current(self.data.get_current() - 2)
+                        elif key.name == 'KEY_ENTER':
+                            self.stop()
+                            # decreasing by 1 because consumer thread will increase by 1
+                            self.data.set_current(self.data.get_selected() - 1)
+                        elif key == 'q':
+                            self.ui.terminate()
+                            self.ui_thread.join()
+                            self.ui.clear()
+                            self.data.query_mode()
+                        elif key.name == 'KEY_ESCAPE':
+                            self.stop()
+                            self.data.end()
+                            return

@@ -46,7 +46,6 @@ def ls(music_lib: MusicLibrary, args):
 
 
 def load(music_lib: MusicLibrary, args):
-
     new_playlist = music_lib.get_or_create_playlist(args.playlist) if args.playlist else None
     for i, s in enumerate(args.songs):
         try:
@@ -67,7 +66,8 @@ def main():
     # Create the sub-parsers
     subparsers = parser.add_subparsers(dest="command")
     parser_play = subparsers.add_parser("play", help="play a song")
-    parser_play.add_argument("query", nargs="+", help="query used to search the library or youtube for the song to play")
+    parser_play.add_argument("query", nargs="+",
+                             help="query used to search the library or youtube for the song to play")
     parser_play.add_argument("-e", "--exact", action="store_true",
                              help="only use exact matches to play a song from library, will not search youtube or "
                                   "download a song")
@@ -75,7 +75,7 @@ def main():
                              help="don't search youtube and download the song if none is found in library")
 
     parser_playall = subparsers.add_parser("playall", help="play all songs or playlists")
-    parser_playall.add_argument("what", nargs="?", default=["songs"], choices=["songs", "playlists"])
+    parser_playall.add_argument("what", nargs="?", default="songs", choices=["songs", "playlists"])
 
     parser_playlist = subparsers.add_parser("playlist", help="play playlist")
     parser_playlist.add_argument("query", help="query used to search the library for a playlist to play")
@@ -93,26 +93,28 @@ def main():
     parser_load.add_argument("-c", "--check", help="if true will check if song already exists and won't download it",
                              action="store_true")
 
+    subparsers.add_parser("start", help="start music player without any songs to play")
+
     args = parser.parse_args()
     library = MusicLibrary(DOWNLOAD_FOLDER)
     player = App(library)
 
     if args.command == "play":
         play_song(library, args)
-        player.start()
+        player.run()
     elif args.command == "playall":
         play_all(library, args)
-        player.start()
+        player.run()
     elif args.command == "playlist":
         playlist(library, args)
-        player.start()
+        player.run()
     elif args.command == "ls":
         ls(library, args)
     elif args.command == "load":
         load(library, args)
-    player.join()
+    elif args.command == "start":
+        player.start()
 
 
 if __name__ == "__main__":
     main()
-

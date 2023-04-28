@@ -1,6 +1,12 @@
+from enum import Enum
 from threading import Lock
 
 from domain.song import Song
+
+
+class Mode(Enum):
+    NORMAL = 1
+    QUERY = 2
 
 
 class Data:
@@ -9,7 +15,8 @@ class Data:
         self._current = -1
         self._selected = 0
         self._song_history = []
-        self._query_mode = False
+        self._running = True
+        self._mode = Mode.NORMAL
         self.selected_lock = Lock()
         self.current_lock = Lock()
 
@@ -26,11 +33,20 @@ class Data:
         return self._current
 
     def end(self):
+        self.quit()
         self.set_current(self.length())
+
+    def has_songs(self):
+        self.current_lock.acquire()
+        has_songs = self._current >= 0 and (self._current < self.length())
+        self.current_lock.release()
+        return has_songs
+
 
     def inc_current(self):
         self.current_lock.acquire()
         if self._current >= self.length() - 1:
+            self.current_lock.release()
             return False
         self._current += 1
         self.current_lock.release()
@@ -69,13 +85,20 @@ class Data:
     def path_at(self, index):
         return self._song_history[index]
 
-    def set_query_mode(self, query_mode):
-        self._query_mode = query_mode
+    def query_mode(self):
+        self._mode = Mode.QUERY
 
-    def get_query_mode(self):
-        return self._query_mode
+    def normal_mode(self):
+        self._mode = Mode.NORMAL
+
+    def is_query_mode(self):
+        return self._mode == Mode.QUERY
+
+    def running(self):
+        return self._running
+
+    def quit(self):
+        self._running = False
 
 
 APP_DATA = Data()
-
-
