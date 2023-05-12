@@ -123,10 +123,6 @@ class App:
         self.keyboard_thread = Thread(target=self.keyboard.listen, daemon=True, name="KEYBOARD")
         self.keyboard_thread.start()
 
-    def wait_till_playing(self):
-        while not self.data.has_songs():
-            time.sleep(1e-6)
-
     def wait_keyboard(self):
         if self.keyboard.is_blocking:
             print("press any key to continue")
@@ -200,6 +196,8 @@ class App:
             print(self.terminal.home)
             print(self.terminal.normal_cursor)
             self.wait_keyboard()
+            print(self.ui.skipped_frames)
+            print(self.terminal.normal_cursor)
             print("Exiting...")
 
     # keyboard actions ---------------------------------------------

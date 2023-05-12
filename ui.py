@@ -20,6 +20,7 @@ class UserInterface:
         self.t = terminal
         self.stop = False
         self.paused = False
+        self.skipped_frames = 0
 
     @staticmethod
     def format_time(seconds):
@@ -88,6 +89,7 @@ class UserInterface:
                 self.draw_song_list(duration_str, elapsed_str)
                 sleep_for = frame_start + interval - time.time()
                 if sleep_for > 0:
+                    self.skipped_frames += 1
                     time.sleep(sleep_for)
         self.stop = False
         self.paused = False
