@@ -41,14 +41,11 @@ class Player:
     def is_paused(self):
         return self.paused
 
-    def is_playing(self):
-        return mixer.music.get_busy() or self.paused
-
     def play(self, path):
         mixer.music.load(path)
         mixer.music.play()
         self.paused = False
-        while True:
+        while APP_DATA.running():
             try:
                 command = self.play_queue.get_nowait()
                 if command == self.STOP:
@@ -67,6 +64,9 @@ class Player:
                     mixer.music.unload()
                     return
                 time.sleep(1e-6)
+        if mixer.music.get_busy() or self.paused:
+            mixer.music.stop()
+            mixer.music.unload()
 
 
 class App:
@@ -192,15 +192,16 @@ class App:
                     else:
                         self.data.end()
         except BaseException:
-            traceback.print_exc()
-            print("Exiting...")
+            self.stop()
+            self.data.end()
         finally:
             self.wait_player()
-            self.wait_keyboard()
             self.wait_ui()
             print(self.terminal.clear)
             print(self.terminal.home)
             print(self.terminal.normal_cursor)
+            self.wait_keyboard()
+            print("Exiting...")
 
     # keyboard actions ---------------------------------------------
     def action_down(self):

@@ -6,6 +6,8 @@ from blessed import Terminal
 from numpy import ndarray
 from pygame import mixer
 
+from app_data import APP_DATA
+
 
 class UserInterface:
 
@@ -70,7 +72,7 @@ class UserInterface:
             frame_gen = graph_frames_from_audio(data, point_interval, self.width, divisor)
             current_frame = 0
             duration_str = self.format_time(duration)
-            while not self.stop:
+            while not self.stop and APP_DATA.running():
                 frame_start = time.time()
                 elapsed_str = self.format_time(min(mixer.music.get_pos() / 1000, duration))
                 self.clear()
