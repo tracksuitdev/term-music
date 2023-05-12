@@ -16,6 +16,7 @@ def which_key_is_it():
     terminal = Terminal()
     with terminal.cbreak():
         key = terminal.inkey()
+        print(key.is_sequence)
         print(key)
         print(key.name)
         print(key.code)

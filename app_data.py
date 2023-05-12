@@ -21,7 +21,14 @@ class Data:
         self.current_lock = Lock()
 
     def insert_song_after_current(self, song):
+        self.current_lock.acquire()
         self._song_history.insert(self._current + 1, song)
+        self.current_lock.release()
+
+    def reset_current(self):
+        self.current_lock.acquire()
+        self._current = self.length() - 1
+        self.current_lock.release()
 
     def length(self):
         return len(self._song_history)
@@ -38,19 +45,18 @@ class Data:
 
     def has_songs(self):
         self.current_lock.acquire()
-        has_songs = self._current >= 0 and (self._current < self.length())
+        has_songs = self.length() > 0 and self._current < self.length()
         self.current_lock.release()
         return has_songs
 
-
     def inc_current(self):
         self.current_lock.acquire()
-        if self._current >= self.length() - 1:
+        if self._current >= self.length():
             self.current_lock.release()
             return False
         self._current += 1
         self.current_lock.release()
-        return True
+        return self._current < self.length()
 
     def set_current(self, index):
         self.current_lock.acquire()
@@ -86,6 +92,7 @@ class Data:
         return self._song_history[index]
 
     def query_mode(self):
+        print("QUERY MODE")
         self._mode = Mode.QUERY
 
     def normal_mode(self):
