@@ -7,6 +7,7 @@ class Keyboard:
         self.terminal = terminal
         self.keymap = keymap
         self.data = APP_DATA
+        self.is_blocking = False
 
     def add_key(self, key, func):
         self.keymap[key] = func
@@ -17,7 +18,9 @@ class Keyboard:
     def listen(self):
         with self.terminal.cbreak():
             while self.data.has_songs() and not self.data.is_query_mode():
+                self.is_blocking = True
                 key = self.terminal.inkey()
+                self.is_blocking = False
                 if key.is_sequence:
                     self.keymap.get(key.name, lambda: None)()
                 else:

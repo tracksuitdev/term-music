@@ -9,7 +9,7 @@ from pygame import mixer
 
 class UserInterface:
 
-    def __init__(self, data, terminal: Terminal, fps=30, height=15, width=30, print_char="#"):
+    def __init__(self, data, terminal: Terminal, fps=60, height=15, width=30, print_char="#"):
         self.data = data
         self.fps = fps
         self.width = width

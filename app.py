@@ -1,4 +1,5 @@
 import time
+import traceback
 from queue import Queue, Empty
 from threading import Thread
 from typing import Optional
@@ -8,7 +9,7 @@ from blessed import Terminal
 from pygame import mixer
 
 from app_data import APP_DATA
-from config import KEYMAP
+from config import KEYMAP, UI_SETTINGS
 from domain.music_library import MusicLibrary
 from domain.song import Song
 from keyboard import Keyboard
@@ -75,7 +76,7 @@ class App:
         self.data = APP_DATA
         self.player = Player()
         self.terminal = Terminal()
-        self.ui = UserInterface(self.data, self.terminal)
+        self.ui = UserInterface(self.data, self.terminal, **UI_SETTINGS)
         self.ui_thread: Optional[Thread] = None
         self.play_thread: Optional[Thread] = None
         self.keyboard_thread: Optional[Thread] = None
@@ -128,6 +129,8 @@ class App:
             time.sleep(1e-6)
 
     def wait_keyboard(self):
+        if self.keyboard.is_blocking:
+            print("press any key to continue")
         if self.keyboard_thread and self.keyboard_thread.is_alive():
             self.keyboard_thread.join()
 
@@ -142,56 +145,62 @@ class App:
     def restart_keyboard(self):
         self.wait_keyboard()
         self.start_keyboard()
-        
+
     def is_playing(self):
         return self.play_thread and self.play_thread.is_alive()
 
     def run(self):
-        if self.data.has_songs():
-            self.start_keyboard()
-        while self.data.running():
-            if self.data.is_query_mode():
-                query = input("Search: \n")
-                success = self.music_lib.download_and_play_song(query, True, True)
-                if success:
-                    if self.is_playing():
-                        self.stop()
-                    self.restart_keyboard()
-                    self.data.normal_mode()
+        try:
+            if self.data.has_songs():
+                self.start_keyboard()
+            while self.data.running():
+                if self.data.is_query_mode():
+                    query = input("Search: \n")
+                    success = self.music_lib.download_and_play_song(query, True, True)
+                    if success:
+                        if self.is_playing():
+                            self.stop()
+                        self.data.normal_mode()
+                        self.restart_keyboard()
+                    else:
+                        return_mode = "return to player" if self.data.has_songs() else "exit"
+                        ret = input(f"No song found, {return_mode} Y/N: ")
+                        if ret == "Y":
+                            if return_mode == "return to player":
+                                self.data.normal_mode()
+                                self.restart_keyboard()
+                                self.restart_ui()
+                            else:
+                                self.data.end()
+                elif self.is_playing():
+                    time.sleep(1e-3)
+                    continue
+                if self.data.has_songs() and self.data.inc_current():
+                    index, song = self.data.current()
+                    self.data.set_selected(index)
+                    self.play_audio(song)
                 else:
-                    return_mode = "return to player" if self.data.has_songs() else "exit"
-                    ret = input(f"No song found, {return_mode} Y/N: ")
-                    if ret == "Y":
-                        if return_mode == "return to player":
-                            self.data.normal_mode()
-                            self.restart_ui()
-                        else:
-                            self.data.end()
-            elif self.is_playing():
-                time.sleep(1e-3)
-                continue
-            if self.data.has_songs() and self.data.inc_current():
-                index, song = self.data.current()
-                self.data.set_selected(index)
-                self.play_audio(song)
-            else:
-                self.wait_keyboard()
-                self.wait_ui()
-                self.data.reset_current()
-                mode = input("No songs to play, p - play all songs in music library, q - enter query mode: ")
-                if mode == "p":
-                    self.music_lib.play_all()
-                    self.start_keyboard()
-                elif mode == "q":
-                    self.data.query_mode()
-                else:
-                    self.data.end()
-        self.wait_player()
-        self.wait_keyboard()
-        self.wait_ui()
-        print(self.terminal.clear)
-        print(self.terminal.home)
-        print(self.terminal.normal_cursor)
+                    self.wait_ui()
+                    self.wait_keyboard()
+                    self.data.reset_current()
+                    mode = input("No songs to play, p - play all songs in music library, q - enter query mode: ")
+                    if mode == "p":
+                        self.music_lib.play_all()
+                        self.start_keyboard()
+                    elif mode == "q":
+                        self.data.query_mode()
+                    else:
+                        self.data.end()
+        except BaseException:
+            traceback.print_exc()
+            print("Exiting...")
+        finally:
+            self.wait_player()
+            self.wait_keyboard()
+            self.wait_ui()
+            print(self.terminal.clear)
+            print(self.terminal.home)
+            print(self.terminal.normal_cursor)
 
     # keyboard actions ---------------------------------------------
     def action_down(self):
