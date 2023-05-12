@@ -1,5 +1,7 @@
 #!/usr/bin/python3
+import os
 
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import argparse
 
 from config import DOWNLOAD_FOLDER
@@ -17,6 +19,7 @@ def play_song(music_lib: MusicLibrary, args):
     else:
         for q in args.query:
             music_lib.download_and_play_song(q)
+    start_app(music_lib)
 
 
 def play_all(music_lib: MusicLibrary, args):
@@ -24,6 +27,7 @@ def play_all(music_lib: MusicLibrary, args):
         music_lib.play_all()
     else:
         music_lib.play_all_playlists()
+    start_app(music_lib)
 
 
 def playlist(music_lib: MusicLibrary, args):
@@ -31,6 +35,7 @@ def playlist(music_lib: MusicLibrary, args):
         music_lib.play_playlist(args.query)
     else:
         music_lib.search_and_play_playlist(args.query)
+    start_app(music_lib)
 
 
 def ls(music_lib: MusicLibrary, args):
@@ -57,6 +62,11 @@ def load(music_lib: MusicLibrary, args):
         print(f"Processed {i + 1}/{len(args.songs)}")
     if new_playlist:
         new_playlist.save()
+
+
+def start_app(library: MusicLibrary):
+    app = App(library)
+    app.run()
 
 
 def main():
@@ -93,27 +103,21 @@ def main():
     parser_load.add_argument("-c", "--check", help="if true will check if song already exists and won't download it",
                              action="store_true")
 
-    # subparsers.add_parser("start", help="start music player without any songs to play")
-
     args = parser.parse_args()
     library = MusicLibrary(DOWNLOAD_FOLDER)
-    player = App(library)
 
     if args.command == "play":
         play_song(library, args)
-        player.run()
     elif args.command == "playall":
         play_all(library, args)
-        player.run()
     elif args.command == "playlist":
         playlist(library, args)
-        player.run()
     elif args.command == "ls":
         ls(library, args)
     elif args.command == "load":
         load(library, args)
     elif args.command is None:
-        player.run()
+        start_app(library)
 
 
 if __name__ == "__main__":

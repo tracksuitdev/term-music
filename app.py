@@ -1,5 +1,4 @@
 import time
-import traceback
 from queue import Queue, Empty
 from threading import Thread
 from typing import Optional
