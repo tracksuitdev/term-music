@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2022 tracksuitdev
+Copyright (c) 2023 tracksuitdev
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
