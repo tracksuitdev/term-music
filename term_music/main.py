@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 import os
 
+from app_data import APP_DATA
+
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import argparse
 
@@ -67,7 +69,7 @@ def load(music_lib: MusicLibrary, args):
 
 
 def start_app(library: MusicLibrary):
-    app = App(library)
+    app = App(APP_DATA, library)
     app.run()
 
 
@@ -109,7 +111,7 @@ def main():
                              action="store_true")
 
     args = parser.parse_args()
-    library = MusicLibrary(DOWNLOAD_FOLDER)
+    library = MusicLibrary(APP_DATA, DOWNLOAD_FOLDER)
 
     if args.command == "play":
         play_song(library, args)

@@ -3,7 +3,7 @@ from queue import Queue, Empty
 
 from pygame import mixer
 
-from app_data import APP_DATA
+from app_data import Data
 
 
 class Player:
@@ -11,8 +11,9 @@ class Player:
     PAUSE = 'PAUSE'
     UNPAUSE = 'UNPAUSE'
 
-    def __init__(self):
+    def __init__(self, data: Data):
         mixer.init()
+        self.data = data
         self.play_queue = Queue()
         self.paused = False
 
@@ -35,7 +36,7 @@ class Player:
         mixer.music.load(path)
         mixer.music.play()
         self.paused = False
-        while APP_DATA.running():
+        while self.data.running():
             try:
                 command = self.play_queue.get_nowait()
                 if command == self.STOP:

@@ -3,7 +3,6 @@ from typing import Iterable
 
 import youtube_dl
 
-from app_data import APP_DATA
 from domain.playlist import Playlist
 
 
@@ -29,9 +28,9 @@ def search(query: str, data: Iterable[str]):
 
 
 class MusicLibrary:
-    def __init__(self, download_folder):
+    def __init__(self, data, download_folder):
         self.download_folder = download_folder
-        self.data = APP_DATA
+        self.data = data
         if not os.path.exists(download_folder):
             os.mkdir(download_folder)
 

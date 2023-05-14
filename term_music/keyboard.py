@@ -3,10 +3,10 @@ from app_data import APP_DATA
 
 class Keyboard:
 
-    def __init__(self, terminal, keymap):
+    def __init__(self, data, terminal, keymap):
         self.terminal = terminal
         self.keymap = keymap
-        self.data = APP_DATA
+        self.data = data
         self.is_blocking = False
 
     def add_key(self, key, func):
