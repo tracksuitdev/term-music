@@ -7,8 +7,6 @@ from blessed import Terminal
 from pydub import AudioSegment
 from pygame import mixer
 
-from app_data import APP_DATA
-
 logger = logging.getLogger(__name__)
 
 
@@ -90,7 +88,7 @@ class UserInterface:
             print(self.t.clear)
             current_frame = 0
             duration_str = self.format_time(duration)
-            while not self.stop and APP_DATA.running() and ((current_frame * self.width) < len(frames)):
+            while not self.stop and self.data.running() and ((current_frame * self.width) < len(frames)):
                 frame_start = time.time()
                 elapsed_str = self.format_time(min(mixer.music.get_pos() / 1000, duration))
                 self.clear()

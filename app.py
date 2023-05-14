@@ -1,6 +1,5 @@
 import time
 import traceback
-from queue import Queue, Empty
 from threading import Thread
 from typing import Optional
 
@@ -12,60 +11,8 @@ from config import KEYMAP, UI_SETTINGS
 from domain.music_library import MusicLibrary
 from domain.song import Song
 from keyboard import Keyboard
+from player import Player
 from ui import UserInterface
-
-
-class Player:
-    STOP = 'STOP'
-    PAUSE = 'PAUSE'
-    UNPAUSE = 'UNPAUSE'
-
-    def __init__(self):
-        mixer.init()
-        self.play_queue = Queue()
-        self.paused = False
-
-    def put(self, command):
-        self.play_queue.put(command)
-
-    def stop(self):
-        self.play_queue.put(self.STOP)
-
-    def pause(self):
-        self.play_queue.put(self.PAUSE)
-
-    def unpause(self):
-        self.play_queue.put(self.UNPAUSE)
-
-    def is_paused(self):
-        return self.paused
-
-    def play(self, path):
-        mixer.music.load(path)
-        mixer.music.play()
-        self.paused = False
-        while APP_DATA.running():
-            try:
-                command = self.play_queue.get_nowait()
-                if command == self.STOP:
-                    mixer.music.stop()
-                    mixer.music.unload()
-                    return
-                elif command == self.PAUSE:
-                    mixer.music.pause()
-                    self.paused = True
-                elif command == self.UNPAUSE:
-                    mixer.music.unpause()
-                    self.paused = False
-            except Empty:
-                if not mixer.music.get_busy() and not self.paused:
-                    mixer.music.stop()
-                    mixer.music.unload()
-                    return
-                time.sleep(1e-6)
-        if mixer.music.get_busy() or self.paused:
-            mixer.music.stop()
-            mixer.music.unload()
 
 
 class App:
@@ -143,6 +90,13 @@ class App:
     def is_playing(self):
         return self.play_thread and self.play_thread.is_alive()
 
+    def get_no_songs_prompt(self):
+        prompts = ["No songs to play", "p - play all songs in music library", "q - enter query mode"]
+        if self.data.length() > 0:
+            prompts.append("r - restart with current history")
+        prompts.append("press any key to exit: ")
+        return "\n".join(prompts)
+
     def run(self):
         try:
             if self.data.has_songs():
@@ -177,10 +131,7 @@ class App:
                     self.wait_ui()
                     self.wait_keyboard()
                     self.data.reset_current()
-                    mode = input("No songs to play,\n"
-                                 "p - play all songs in music library,\n"
-                                 "q - enter query mode,\n"
-                                 f"{self.data.length() > 0 and 'r - restart with current history: ' or ''}")
+                    mode = input(self.get_no_songs_prompt())
                     if mode == "p":
                         self.music_lib.play_all()
                         self.start_keyboard()
