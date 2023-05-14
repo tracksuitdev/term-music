@@ -10,16 +10,6 @@ from pygame import mixer
 logger = logging.getLogger(__name__)
 
 
-def timeit(func):
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        result = func(*args, **kwargs)
-        logger.debug(f"{func.__name__} took {time.time() - start} seconds")
-        return result
-
-    return wrapper
-
-
 class UserInterface:
 
     def __init__(self, data, terminal: Terminal, fps=60, height=15, width=30, print_char="#"):
