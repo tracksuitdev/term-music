@@ -7,6 +7,9 @@ import argparse
 from config import DOWNLOAD_FOLDER
 from app import App
 from domain.music_library import MusicLibrary
+import logging
+
+logging.basicConfig(filename="music-lib.log", level=logging.DEBUG)
 
 
 def play_song(music_lib: MusicLibrary, args):

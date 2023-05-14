@@ -1,12 +1,25 @@
+import logging
 import os.path
 import time
 
-from audiovisualizer import calc_data_for_visualization, graph_frames_from_audio
+import numpy as np
 from blessed import Terminal
-from numpy import ndarray
+from pydub import AudioSegment
 from pygame import mixer
 
 from app_data import APP_DATA
+
+logger = logging.getLogger(__name__)
+
+
+def timeit(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        logger.debug(f"{func.__name__} took {time.time() - start} seconds")
+        return result
+
+    return wrapper
 
 
 class UserInterface:
@@ -21,6 +34,7 @@ class UserInterface:
         self.stop = False
         self.paused = False
         self.skipped_frames = 0
+        self.interval = 1 / fps
 
     @staticmethod
     def format_time(seconds):
@@ -44,10 +58,9 @@ class UserInterface:
         print(self.t.home + self.t.clear)
 
     def draw_frame(self, frame):
-        with self.t.location(0, 0):
-            for i, height in enumerate(frame):
-                for j in range(height):
-                    print(self.t.move_yx(self.height - j - 1, i) + self.print_char)
+        for i, height in enumerate(frame):
+            for j in range(int(height)):
+                print(self.t.move_yx(self.height - j - 1, i) + self.print_char)
 
     def draw_song_list(self, duration, elapsed):
         max_width = self.t.width - self.width
@@ -65,12 +78,16 @@ class UserInterface:
                 else:
                     print(self.t.snow4(title[:max_width]))
 
-    def render(self, data: ndarray, max_amp: int, frame_rate: int, duration: float):
+    def get_frames(self, segment: AudioSegment):
+        data = np.frombuffer(segment.raw_data, dtype=np.int16)
+        x = np.linspace(0, data.size - 1, int(segment.duration_seconds * self.fps * self.width))
+        xp = np.linspace(0, data.size - 1, data.size)
+        frames = np.ceil(np.abs(np.interp(x, xp, data)) * (self.height / segment.max_possible_amplitude))
+        return frames
+
+    def render(self, frames, duration: float):
         with self.t.hidden_cursor():
             print(self.t.clear)
-            length, point_interval, last_frame_length, interval, divisor = \
-                calc_data_for_visualization(data, frame_rate, max_amp, self.width, self.fps, self.height)
-            frame_gen = graph_frames_from_audio(data, point_interval, self.width, divisor)
             current_frame = 0
             duration_str = self.format_time(duration)
             while not self.stop and APP_DATA.running():
@@ -79,7 +96,7 @@ class UserInterface:
                 self.clear()
                 if not self.paused:
                     try:
-                        f = frame_gen.__next__()
+                        f = frames[current_frame * self.width:(current_frame + 1) * self.width]
                     except StopIteration:
                         self.stop = False
                         self.paused = False
@@ -87,9 +104,10 @@ class UserInterface:
                     self.draw_frame(f)
                     current_frame += 1
                 self.draw_song_list(duration_str, elapsed_str)
-                sleep_for = frame_start + interval - time.time()
+                sleep_for = frame_start + self.interval - time.time()
                 if sleep_for > 0:
-                    self.skipped_frames += 1
                     time.sleep(sleep_for)
+                else:
+                    self.skipped_frames += 1
         self.stop = False
         self.paused = False

@@ -1,9 +1,9 @@
 import time
+import traceback
 from queue import Queue, Empty
 from threading import Thread
 from typing import Optional
 
-import numpy as np
 from blessed import Terminal
 from pygame import mixer
 
@@ -91,9 +91,8 @@ class App:
 
     def load_ui(self, song: Song):
         audio = song.audio()
-        data = np.array(audio.get_array_of_samples()[0::2])
-        self.ui_thread = Thread(target=self.ui.render, args=[data, audio.max_possible_amplitude, audio.frame_rate,
-                                                             audio.duration_seconds])
+        frames = self.ui.get_frames(audio)
+        self.ui_thread = Thread(target=self.ui.render, args=[frames, audio.duration_seconds])
 
     def start_ui(self, song: Song):
         self.load_ui(song)
@@ -189,6 +188,7 @@ class App:
         except BaseException:
             self.stop()
             self.data.end()
+            traceback.print_exc()
         finally:
             self.wait_player()
             self.wait_ui()
@@ -196,7 +196,6 @@ class App:
             print(self.terminal.home)
             print(self.terminal.normal_cursor)
             self.wait_keyboard()
-            print(self.ui.skipped_frames)
             print(self.terminal.normal_cursor)
             print("Exiting...")
 
