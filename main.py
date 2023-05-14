@@ -7,9 +7,8 @@ import argparse
 from config import DOWNLOAD_FOLDER
 from app import App
 from domain.music_library import MusicLibrary
-import logging
 
-logging.basicConfig(filename="music-lib.log", level=logging.DEBUG)
+version = '0.1.0'
 
 
 def play_song(music_lib: MusicLibrary, args):
@@ -75,6 +74,7 @@ def start_app(library: MusicLibrary):
 def main():
     # Create the top-level parser
     parser = argparse.ArgumentParser(prog="music")
+    parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {version}")
 
     # Create the sub-parsers
     subparsers = parser.add_subparsers(dest="command")
