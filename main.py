@@ -73,7 +73,9 @@ def start_app(library: MusicLibrary):
 
 def main():
     # Create the top-level parser
-    parser = argparse.ArgumentParser(prog="music")
+    parser = argparse.ArgumentParser(prog="music",
+                                     description="Music player and library manager. "
+                                                 "Starts the player in no songs mode if no arguments are given.")
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {version}")
 
     # Create the sub-parsers

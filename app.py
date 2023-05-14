@@ -177,12 +177,18 @@ class App:
                     self.wait_ui()
                     self.wait_keyboard()
                     self.data.reset_current()
-                    mode = input("No songs to play, p - play all songs in music library, q - enter query mode: ")
+                    mode = input("No songs to play,\n"
+                                 "p - play all songs in music library,\n"
+                                 "q - enter query mode,\n"
+                                 f"{self.data.length() > 0 and 'r - restart with current history: ' or ''}")
                     if mode == "p":
                         self.music_lib.play_all()
                         self.start_keyboard()
                     elif mode == "q":
                         self.data.query_mode()
+                    elif mode == "r":
+                        self.data.restart_current()
+                        self.start_keyboard()
                     else:
                         self.data.end()
         except BaseException:

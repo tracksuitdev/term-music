@@ -90,17 +90,12 @@ class UserInterface:
             print(self.t.clear)
             current_frame = 0
             duration_str = self.format_time(duration)
-            while not self.stop and APP_DATA.running():
+            while not self.stop and APP_DATA.running() and ((current_frame * self.width) < len(frames)):
                 frame_start = time.time()
                 elapsed_str = self.format_time(min(mixer.music.get_pos() / 1000, duration))
                 self.clear()
                 if not self.paused:
-                    try:
-                        f = frames[current_frame * self.width:(current_frame + 1) * self.width]
-                    except StopIteration:
-                        self.stop = False
-                        self.paused = False
-                        return
+                    f = frames[current_frame * self.width:(current_frame + 1) * self.width]
                     self.draw_frame(f)
                     current_frame += 1
                 self.draw_song_list(duration_str, elapsed_str)

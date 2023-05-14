@@ -25,6 +25,11 @@ class Data:
         self._song_history.insert(self._current + 1, song)
         self.current_lock.release()
 
+    def restart_current(self):
+        self.current_lock.acquire()
+        self._current = -1
+        self.current_lock.release()
+
     def reset_current(self):
         self.current_lock.acquire()
         self._current = self.length() - 1
