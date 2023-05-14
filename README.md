@@ -4,7 +4,7 @@
 
 Terminal music player with audio visualization and youtube-dl integration.
 
-[](https://github.com/tracksuitdev/term-music/blob/master/assets/term-music.gif?raw=true)
+![](https://github.com/tracksuitdev/term-music/blob/master/assets/term-music.gif?raw=true)
 
 ## Installation
 
