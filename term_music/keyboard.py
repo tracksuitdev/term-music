@@ -1,6 +1,3 @@
-from app_data import APP_DATA
-
-
 class Keyboard:
 
     def __init__(self, data, terminal, keymap):

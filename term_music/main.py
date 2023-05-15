@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 import os
 
-from app_data import APP_DATA
+from term_music.app_data import APP_DATA
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import argparse
 
-from config import DOWNLOAD_FOLDER
-from app import App
-from domain.music_library import MusicLibrary
+from term_music.config import DOWNLOAD_FOLDER
+from term_music.app import App
+from term_music.domain.music_library import MusicLibrary
 
 version = '0.1.0'
 

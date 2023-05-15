@@ -3,7 +3,7 @@ from queue import Queue, Empty
 
 from pygame import mixer
 
-from app_data import Data
+from term_music.app_data import Data
 
 
 class Player:

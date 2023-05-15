@@ -6,13 +6,13 @@ from typing import Optional
 from blessed import Terminal
 from pygame import mixer
 
-from app_data import APP_DATA
-from config import KEYMAP, UI_SETTINGS
-from domain.music_library import MusicLibrary
-from domain.song import Song
-from keyboard import Keyboard
-from player import Player
-from ui import UserInterface
+from term_music.app_data import APP_DATA
+from term_music.config import KEYMAP, UI_SETTINGS
+from term_music.domain.music_library import MusicLibrary
+from term_music.domain.song import Song
+from term_music.keyboard import Keyboard
+from term_music.player import Player
+from term_music.ui import UserInterface
 
 
 class App:

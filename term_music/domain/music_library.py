@@ -3,7 +3,7 @@ from typing import Iterable
 
 import youtube_dl
 
-from domain.playlist import Playlist
+from term_music.domain.playlist import Playlist
 
 
 def is_song(filename):

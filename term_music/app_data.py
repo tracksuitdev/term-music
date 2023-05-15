@@ -1,7 +1,7 @@
 from enum import Enum
 from threading import Lock
 
-from domain.song import Song
+from term_music.domain.song import Song
 
 
 class Mode(Enum):
