@@ -1,3 +1,14 @@
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+[project]
+name = "term-music"
+version = "0.1.0"
+authors = [{ name="tracksuitdev" }]
+description = "A music player for the terminal"
+readme = "README.md"
+requires-python = ">=3.7.0"
+keywords = ["terminal", "music", "player", "library", "youtube-dl"]
+[project.urls]
+"Homepage" = "https://github.com/tracksuitdev/term-music"
+"Source" = "https://github.com/tracksuitdev/term-music"

@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 import os
+import traceback
 
 from term_music.app_data import APP_DATA
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import argparse
 
-from term_music.config import DOWNLOAD_FOLDER
+from term_music.config import Config
 from term_music.app import App
 from term_music.domain.music_library import MusicLibrary
 
@@ -68,19 +69,24 @@ def load(music_lib: MusicLibrary, args):
         new_playlist.save()
 
 
-def start_app(library: MusicLibrary):
-    app = App(APP_DATA, library)
+def start_app(library: MusicLibrary, config: Config):
+    app = App(APP_DATA, library, config)
     app.run()
 
 
 def main():
-    # Create the top-level parser
+    try:
+        config = Config()
+    except Exception:
+        traceback.print_exc()
+        print(f"Error loading config, exiting...")
+        return
+
     parser = argparse.ArgumentParser(prog="music",
                                      description="Music player and library manager. "
                                                  "Starts the player in no songs mode if no arguments are given.")
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {version}")
 
-    # Create the sub-parsers
     subparsers = parser.add_subparsers(dest="command")
     parser_play = subparsers.add_parser("play", help="play a song")
     parser_play.add_argument("query", nargs="+",
@@ -111,7 +117,7 @@ def main():
                              action="store_true")
 
     args = parser.parse_args()
-    library = MusicLibrary(APP_DATA, DOWNLOAD_FOLDER)
+    library = MusicLibrary(APP_DATA, config.download_folder)
 
     if args.command == "play":
         play_song(library, args)
@@ -124,7 +130,7 @@ def main():
     elif args.command == "load":
         load(library, args)
     elif args.command is None:
-        start_app(library)
+        start_app(library, config)
 
 
 if __name__ == "__main__":

@@ -17,16 +17,17 @@ from term_music.ui import UserInterface
 
 class App:
 
-    def __init__(self, data: APP_DATA, music_lib: MusicLibrary):
+    def __init__(self, data: APP_DATA, music_lib: MusicLibrary, config):
         self.music_lib = music_lib
         self.data = data
         self.player = Player(data)
         self.terminal = Terminal()
-        self.ui = UserInterface(data, self.terminal, **UI_SETTINGS)
+        self.ui = UserInterface(data, self.terminal, **config.ui_settings)
         self.ui_thread: Optional[Thread] = None
         self.play_thread: Optional[Thread] = None
         self.keyboard_thread: Optional[Thread] = None
-        self.keyboard = Keyboard(data, self.terminal, {key: getattr(self, value) for key, value in KEYMAP.items()})
+        self.keyboard = Keyboard(data, self.terminal,
+                                 {key: getattr(self, value) for key, value in config.keymap.items()})
 
     def play(self, path):
         self.data.add_song(path)
