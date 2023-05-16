@@ -8,9 +8,17 @@ Terminal music player with audio visualization and youtube-dl integration.
 
 ## Installation
 
-Clone the repo and change `DOWNLOAD_FOLDER` in `config.py` to the folder where you want to store your music.
+Install using pip `pip install term-music`. After installation, you can run `term-music`.
+
+At first run, the program will create a folder called `.term-music` in your home directory with config.ini file with
+default settings. You can change the settings in the config file to your liking. 
+
+Also in the `.term-music` directory
+there will be a `music-lib` folder where all your songs will be downloaded to. You can change this by changing the
+`download_folder` setting in the config file.
 
 ## Usage
+
 Inside your download folder all .mp3 files will be considered as songs and all .txt files will be considered as 
 playlists.
 
