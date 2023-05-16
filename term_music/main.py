@@ -4,12 +4,10 @@ import traceback
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 from term_music.commands import Commands
-from term_music.app_data import APP_DATA
 
 import argparse
 
 from term_music.config import Config
-from term_music.domain.music_library import MusicLibrary
 
 version = '0.1.0'
 
@@ -57,8 +55,7 @@ def main():
                              action="store_true")
 
     args = parser.parse_args()
-    library = MusicLibrary(APP_DATA, config.download_folder)
-    commands = Commands(library, config)
+    commands = Commands(config)
     commands.run_command(args.command, args)
 
 

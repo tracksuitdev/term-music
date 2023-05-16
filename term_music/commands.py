@@ -8,10 +8,9 @@ from term_music.domain.music_library import MusicLibrary
 
 class Commands:
 
-    def __init__(self, lib: MusicLibrary, config: Config):
-        self.lib = lib
-        self.config = config
-        self.app = App(APP_DATA, lib, config)
+    def __init__(self, config: Config):
+        self.lib = MusicLibrary(APP_DATA, config.download_folder)
+        self.app = App(APP_DATA, self.lib, config)
 
     def run_command(self, command, args):
         if command is None:
@@ -31,7 +30,7 @@ class Commands:
                 self.lib.download_and_play_song(q)
         self.app.run()
 
-    def play_all(self, args):
+    def playall(self, args):
         if args.what == "songs":
             self.lib.play_all()
         else:
