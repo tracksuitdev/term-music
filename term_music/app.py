@@ -94,6 +94,7 @@ class App:
         prompts = ["No songs to play", "p - play all songs in music library", "q - enter query mode"]
         if self.data.length() > 0:
             prompts.append("r - restart with current history")
+            prompts.append("c - create playlist from current history")
         prompts.append("press any key to exit: ")
         return "\n".join(prompts)
 
@@ -140,8 +141,12 @@ class App:
                     elif mode == "r":
                         self.data.restart_current()
                         self.start_keyboard()
+                    elif mode == "c":
+                        playlist_name = input("Playlist name: ")
+                        self.music_lib.create_playlist(playlist_name, self.data.get_song_names())
                     else:
                         self.data.end()
+                        break
         except BaseException:
             self.stop()
             self.data.end()

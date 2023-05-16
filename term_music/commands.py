@@ -1,5 +1,6 @@
 import traceback
 
+from term_music.domain.playlist import Playlist
 from term_music.app_data import APP_DATA
 from term_music.app import App
 from term_music.config import Config
@@ -56,7 +57,7 @@ class Commands:
             [print(s) for s in self.lib.songs()]
 
     def load(self, args):
-        new_playlist = self.lib.get_or_create_playlist(args.playlist) if args.playlist else None
+        new_playlist = self.lib.get_or_create_playlist(Playlist.filename(args.playlist)) if args.playlist else None
         for i, s in enumerate(args.songs):
             try:
                 song_title = self.lib.search_and_download(s, args.check)

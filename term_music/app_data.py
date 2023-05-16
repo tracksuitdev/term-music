@@ -2,6 +2,7 @@ from enum import Enum
 from threading import Lock
 
 from term_music.domain.song import Song
+from term_music.util import name_from_filename
 
 
 class Mode(Enum):
@@ -97,7 +98,6 @@ class Data:
         return self._song_history[index]
 
     def query_mode(self):
-        print("QUERY MODE")
         self._mode = Mode.QUERY
 
     def normal_mode(self):
@@ -111,6 +111,9 @@ class Data:
 
     def quit(self):
         self._running = False
+
+    def get_song_names(self):
+        return list(map(name_from_filename, self._song_history))
 
 
 APP_DATA = Data()

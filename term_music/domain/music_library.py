@@ -1,30 +1,9 @@
 import os
-from typing import Iterable
 
 import youtube_dl
 
 from term_music.domain.playlist import Playlist
-
-
-def is_song(filename):
-    return filename and filename.endswith(".mp3")
-
-
-def is_playlist(filename):
-    return filename and filename.endswith(".txt")
-
-
-def remove_extension(filenames):
-    return [f[:-4] for f in filenames]
-
-
-def search(query: str, data: Iterable[str]):
-    lower_query = query.lower()
-    results = []
-    for item in data:
-        if lower_query in item.lower():
-            results.append(item)
-    return results
+from term_music.util import is_song, is_playlist, remove_extension, search
 
 
 class MusicLibrary:
@@ -152,12 +131,14 @@ class MusicLibrary:
         return filter(is_playlist, os.listdir(self.download_folder))
 
     def get_or_create_playlist(self, playlist_name):
-        if playlist_name in self.playlists():
-            return Playlist.load(self.download_folder, playlist_name)
+        playlist_filename = Playlist.filename(playlist_name)
+        if playlist_filename in self.playlists():
+            return Playlist.load(self.download_folder, playlist_filename)
         else:
-            playlist = Playlist(self.download_folder, playlist_name)
-            playlist.save()
-            return playlist
+            return Playlist(self.download_folder, playlist_filename).save()
+
+    def create_playlist(self, playlist_name, song_titles):
+        return Playlist(self.download_folder, Playlist.filename(playlist_name), song_titles).save()
 
     def songs(self):
         return set(remove_extension(self.song_files()))

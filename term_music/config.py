@@ -40,7 +40,7 @@ class Config:
 
     @property
     def keymap(self):
-        return {v: k for k, v in self.config["keymap"].items()}
+        return {v.replace('"', '') if '"' in v else v: k for k, v in self.config["keymap"].items()}
 
     @property
     def ui_settings(self):

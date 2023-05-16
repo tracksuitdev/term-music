@@ -9,10 +9,12 @@ class Playlist:
     Songs are saved in files with the same name as song title and extension .mp3
     """
 
-    def __init__(self, download_folder, playlist_name):
+    def __init__(self, download_folder, playlist_name, songs=None):
+        if songs is None:
+            songs = []
         self.download_folder = download_folder
         self.playlist_name = playlist_name
-        self.song_titles = []
+        self.song_titles = songs
 
     def add_song(self, song_title):
         # Add the given song title to the playlist
@@ -28,6 +30,7 @@ class Playlist:
         for song_title in self.song_titles:
             playlist_file.write(song_title + "\n")
         playlist_file.close()
+        return self
 
     @staticmethod
     def load(download_folder, playlist_name):
@@ -38,6 +41,13 @@ class Playlist:
         playlist = Playlist(download_folder, playlist_name)
         playlist.song_titles = [title.strip() for title in song_titles]
         return playlist
+
+    @staticmethod
+    def filename(playlist_name):
+        if playlist_name.endswith(".txt"):
+            return playlist_name
+        else:
+            return playlist_name + ".txt"
 
     def __str__(self):
         # Return a string representation of the playlist

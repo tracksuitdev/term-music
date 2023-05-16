@@ -84,8 +84,8 @@ class UserInterface:
                 self.clear()
                 if not self.paused:
                     f = frames[current_frame * self.width:(current_frame + 1) * self.width]
-                    self.draw_frame(f)
                     current_frame += 1
+                self.draw_frame(f)
                 self.draw_song_list(duration_str, elapsed_str)
                 sleep_for = frame_start + self.interval - time.time()
                 if sleep_for > 0:
