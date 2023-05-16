@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "term-music"
-version = "0.1.0"
+version = "0.2.0"
 authors = [{ name="tracksuitdev" }]
 description = "A music player for the terminal"
 readme = "README.md"
