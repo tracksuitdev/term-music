@@ -1,0 +1,70 @@
+import traceback
+
+from term_music.app_data import APP_DATA
+from term_music.app import App
+from term_music.config import Config
+from term_music.domain.music_library import MusicLibrary
+
+
+class Commands:
+
+    def __init__(self, lib: MusicLibrary, config: Config):
+        self.lib = lib
+        self.config = config
+        self.app = App(APP_DATA, lib, config)
+
+    def run_command(self, command, args):
+        if command is None:
+            self.app.run()
+        else:
+            getattr(self, command)(args)
+
+    def play(self, args):
+        if args.exact:
+            for q in args.query:
+                self.lib.play_song(q)
+        elif args.nodownload:
+            for q in args.query:
+                self.lib.play_song(self.lib.search_song(q)[0])
+        else:
+            for q in args.query:
+                self.lib.download_and_play_song(q)
+        self.app.run()
+
+    def play_all(self, args):
+        if args.what == "songs":
+            self.lib.play_all()
+        else:
+            self.lib.play_all_playlists()
+        self.app.run()
+
+    def playlist(self, args):
+        if args.exact:
+            self.lib.play_playlist(args.query)
+        else:
+            self.lib.search_and_play_playlist(args.query)
+        self.app.run()
+
+    def ls(self, args):
+        if args.all:
+            [print(s) for s in self.lib.songs()]
+            [print(p) for p in self.lib.playlists()]
+        elif args.full:
+            self.lib.print_songs_and_playlists()
+        elif args.playlist:
+            [print(p) for p in self.lib.get_all_playlists()]
+        else:
+            [print(s) for s in self.lib.songs()]
+
+    def load(self, args):
+        new_playlist = self.lib.get_or_create_playlist(args.playlist) if args.playlist else None
+        for i, s in enumerate(args.songs):
+            try:
+                song_title = self.lib.search_and_download(s, args.check)
+                if new_playlist:
+                    new_playlist.add_song(song_title)
+            except Exception:
+                traceback.print_exc()
+            print(f"Processed {i + 1}/{len(args.songs)}")
+        if new_playlist:
+            new_playlist.save()

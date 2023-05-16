@@ -7,7 +7,6 @@ from blessed import Terminal
 from pygame import mixer
 
 from term_music.app_data import APP_DATA
-from term_music.config import KEYMAP, UI_SETTINGS
 from term_music.domain.music_library import MusicLibrary
 from term_music.domain.song import Song
 from term_music.keyboard import Keyboard

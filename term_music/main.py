@@ -1,77 +1,17 @@
 #!/usr/bin/python3
 import os
 import traceback
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
+from term_music.commands import Commands
 from term_music.app_data import APP_DATA
 
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import argparse
 
 from term_music.config import Config
-from term_music.app import App
 from term_music.domain.music_library import MusicLibrary
 
 version = '0.1.0'
-
-
-def play_song(music_lib: MusicLibrary, args):
-    if args.exact:
-        for q in args.query:
-            music_lib.play_song(q)
-    elif args.nodownload:
-        for q in args.query:
-            music_lib.play_song(music_lib.search_song(q)[0])
-    else:
-        for q in args.query:
-            music_lib.download_and_play_song(q)
-    start_app(music_lib)
-
-
-def play_all(music_lib: MusicLibrary, args):
-    if args.what == "songs":
-        music_lib.play_all()
-    else:
-        music_lib.play_all_playlists()
-    start_app(music_lib)
-
-
-def playlist(music_lib: MusicLibrary, args):
-    if args.exact:
-        music_lib.play_playlist(args.query)
-    else:
-        music_lib.search_and_play_playlist(args.query)
-    start_app(music_lib)
-
-
-def ls(music_lib: MusicLibrary, args):
-    if args.all:
-        [print(s) for s in music_lib.songs()]
-        [print(p) for p in music_lib.playlists()]
-    elif args.full:
-        music_lib.print_songs_and_playlists()
-    elif args.playlist:
-        [print(p) for p in music_lib.get_all_playlists()]
-    else:
-        [print(s) for s in music_lib.songs()]
-
-
-def load(music_lib: MusicLibrary, args):
-    new_playlist = music_lib.get_or_create_playlist(args.playlist) if args.playlist else None
-    for i, s in enumerate(args.songs):
-        try:
-            song_title = music_lib.search_and_download(s, args.check)
-            if new_playlist:
-                new_playlist.add_song(song_title)
-        except Exception as e:
-            print(str(e))
-        print(f"Processed {i + 1}/{len(args.songs)}")
-    if new_playlist:
-        new_playlist.save()
-
-
-def start_app(library: MusicLibrary, config: Config):
-    app = App(APP_DATA, library, config)
-    app.run()
 
 
 def main():
@@ -118,19 +58,8 @@ def main():
 
     args = parser.parse_args()
     library = MusicLibrary(APP_DATA, config.download_folder)
-
-    if args.command == "play":
-        play_song(library, args)
-    elif args.command == "playall":
-        play_all(library, args)
-    elif args.command == "playlist":
-        playlist(library, args)
-    elif args.command == "ls":
-        ls(library, args)
-    elif args.command == "load":
-        load(library, args)
-    elif args.command is None:
-        start_app(library, config)
+    commands = Commands(library, config)
+    commands.run_command(args.command, args)
 
 
 if __name__ == "__main__":
