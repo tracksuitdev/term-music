@@ -9,7 +9,7 @@ import argparse
 
 from term_music.config import Config
 
-version = '0.2.0'
+version = '0.2.1'
 
 
 def main():
