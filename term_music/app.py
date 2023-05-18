@@ -6,7 +6,7 @@ from typing import Optional
 from blessed import Terminal
 from pygame import mixer
 
-from term_music.app_data import APP_DATA
+from term_music.app_data import Data
 from term_music.domain.music_library import MusicLibrary
 from term_music.domain.song import Song
 from term_music.keyboard import Keyboard
@@ -16,7 +16,7 @@ from term_music.ui import UserInterface
 
 class App:
 
-    def __init__(self, data: APP_DATA, music_lib: MusicLibrary, config):
+    def __init__(self, data: Data, music_lib: MusicLibrary, config):
         self.music_lib = music_lib
         self.data = data
         self.player = Player(data)
@@ -138,12 +138,16 @@ class App:
                         self.start_keyboard()
                     elif mode == "q":
                         self.data.query_mode()
-                    elif mode == "r":
-                        self.data.restart_current()
-                        self.start_keyboard()
-                    elif mode == "c":
-                        playlist_name = input("Playlist name: ")
-                        self.music_lib.create_playlist(playlist_name, self.data.get_song_names())
+                    elif self.data.length() > 0:
+                        if mode == "r":
+                            self.data.restart_current()
+                            self.start_keyboard()
+                        elif mode == "c":
+                            playlist_name = input("Playlist name: ")
+                            self.music_lib.create_playlist(playlist_name, self.data.get_song_names())
+                        else:
+                            self.data.end()
+                            break
                     else:
                         self.data.end()
                         break

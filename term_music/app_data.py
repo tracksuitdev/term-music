@@ -1,5 +1,6 @@
 from enum import Enum
 from threading import Lock
+from typing import List
 
 from term_music.domain.song import Song
 from term_music.util import name_from_filename
@@ -112,7 +113,7 @@ class Data:
     def quit(self):
         self._running = False
 
-    def get_song_names(self):
+    def get_song_names(self) -> List[str]:
         return list(map(name_from_filename, self._song_history))
 
 

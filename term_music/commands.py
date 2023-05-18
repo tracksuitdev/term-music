@@ -7,6 +7,11 @@ from term_music.config import Config
 from term_music.domain.music_library import MusicLibrary
 
 
+def generalized_search(search_func, query):
+    for x in search_func(query):
+        print(x)
+
+
 class Commands:
 
     def __init__(self, config: Config):
@@ -18,6 +23,12 @@ class Commands:
             self.app.run()
         else:
             getattr(self, command)(args)
+
+    def search(self, args):
+        if "songs" == args.type or args.type is None:
+            generalized_search(self.lib.search_song, args.query)
+        if "playlists" == args.type or args.type is None:
+            generalized_search(self.lib.search_playlists, args.query)
 
     def play(self, args):
         if args.exact:

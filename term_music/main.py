@@ -54,6 +54,10 @@ def main():
     parser_load.add_argument("-c", "--check", help="if true will check if song already exists and won't download it",
                              action="store_true")
 
+    parser_search = subparsers.add_parser("search", help="search for songs and playlists in the music library")
+    parser_search.add_argument("query", help="query used to search the library")
+    parser_search.add_argument("-", "--type", choices=["songs", "playlists"], help="search only songs or playlists")
+
     args = parser.parse_args()
     commands = Commands(config)
     commands.run_command(args.command, args)

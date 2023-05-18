@@ -1,19 +1,21 @@
 import os
+from typing import List
 
 import youtube_dl
 
+from term_music.app_data import Data
 from term_music.domain.playlist import Playlist
 from term_music.util import is_song, is_playlist, remove_extension, search
 
 
 class MusicLibrary:
-    def __init__(self, data, download_folder):
+    def __init__(self, data: Data, download_folder: str):
         self.download_folder = download_folder
         self.data = data
         if not os.path.exists(download_folder):
             os.mkdir(download_folder)
 
-    def download_song(self, song_url):
+    def download_song(self, song_url: str):
         ydl_opts = {
             "outtmpl": os.path.join(self.download_folder, "%(title)s.%(ext)s"),
             "format": "bestaudio/best",
@@ -26,16 +28,16 @@ class MusicLibrary:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([song_url])
 
-    def search_song(self, search_query):
+    def search_song(self, search_query: str):
         return search(search_query, self.songs())
 
-    def search_playlists(self, search_query):
+    def search_playlists(self, search_query: str):
         return search(search_query, self.playlists())
 
-    def search_and_play_playlist(self, search_query):
-        self.play_playlist_filename(self.search_playlists(search_query)[0])
+    def search_and_play_playlist(self, search_query: str):
+        self.play_playlist(self.search_playlists(search_query)[0])
 
-    def search_and_download(self, song_query, check=False, ask=False):
+    def search_and_download(self, song_query: str, check=False, ask=False):
         ydl_opts = {
             "default_search": "ytsearch",
             "max_downloads": 1,
@@ -58,7 +60,7 @@ class MusicLibrary:
             self.download_song(song_url)
             return song_title
 
-    def download_and_play_song(self, song_query, now=False, ask=False):
+    def download_and_play_song(self, song_query: str, now=False, ask=False):
         # Search the local music library for the song
         search_result = self.search_song(song_query)
         if search_result:
@@ -74,7 +76,7 @@ class MusicLibrary:
         self.play_song(song_title, now)
         return True
 
-    def play_filename(self, filename, now=False):
+    def play_filename(self, filename: str, now=False):
         """
         Adds filename to player queue, if now is True the song is added after the current one
         """
@@ -87,16 +89,16 @@ class MusicLibrary:
     def play_song(self, song: str, now=False):
         self.play_filename(song + ".mp3", now)
 
-    def play_playlist(self, playlist):
+    def play_playlist(self, playlist: str):
         self.play_playlist_filename(playlist + ".txt")
 
-    def play(self, filename):
+    def play(self, filename: str):
         if is_playlist(filename):
             self.play_playlist_filename(filename)
         else:
             self.play_filename(filename)
 
-    def play_playlist_filename(self, playlist_filename):
+    def play_playlist_filename(self, playlist_filename: str):
         for song_title in Playlist.load(self.download_folder, playlist_filename).song_titles:
             self.play_song(song_title)
 
@@ -119,7 +121,7 @@ class MusicLibrary:
             if is_playlist(filename):
                 self.play_playlist_filename(filename)
 
-    def delete_song(self, song_title):
+    def delete_song(self, song_title: str):
         # Delete the file with the given name from the download folder
         song_filename = f"{song_title}.mp3"
         os.remove(os.path.join(self.download_folder, song_filename))
@@ -130,14 +132,14 @@ class MusicLibrary:
     def playlist_files(self):
         return filter(is_playlist, os.listdir(self.download_folder))
 
-    def get_or_create_playlist(self, playlist_name):
+    def get_or_create_playlist(self, playlist_name: str):
         playlist_filename = Playlist.filename(playlist_name)
         if playlist_filename in self.playlists():
             return Playlist.load(self.download_folder, playlist_filename)
         else:
             return Playlist(self.download_folder, playlist_filename).save()
 
-    def create_playlist(self, playlist_name, song_titles):
+    def create_playlist(self, playlist_name: str, song_titles: List[str]):
         return Playlist(self.download_folder, Playlist.filename(playlist_name), song_titles).save()
 
     def songs(self):

@@ -7,12 +7,14 @@ from blessed import Terminal
 from pydub import AudioSegment
 from pygame import mixer
 
+from term_music.app_data import Data
+
 logger = logging.getLogger(__name__)
 
 
 class UserInterface:
 
-    def __init__(self, data, terminal: Terminal, fps=60, height=15, width=30, print_char="#"):
+    def __init__(self, data: Data, terminal: Terminal, fps=60, height=15, width=30, print_char="#"):
         self.data = data
         self.fps = fps
         self.width = width

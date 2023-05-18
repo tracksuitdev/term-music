@@ -15,7 +15,7 @@ def remove_extension(filenames):
 
 
 def name_from_filename(filename):
-    return remove_extension(os.path.basename(filename))
+    return os.path.basename(filename)[:-4]
 
 
 def search(query: str, data: Iterable[str]):
